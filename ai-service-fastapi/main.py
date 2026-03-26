@@ -1,39 +1,43 @@
 import os
 from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import List
 from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load env variables
 load_dotenv()
 
-# Create app
 app = FastAPI()
 
-# Initialize client (GitHub models for now)
 client = OpenAI(
     api_key=os.getenv("GITHUB_TOKEN"),
     base_url="https://models.inference.ai.azure.com"
 )
 
-# Request model (like Kotlin data class)
+# ✅ NEW MODEL (matches Spring Boot)
+class Message(BaseModel):
+    role: str
+    content: str
+
 class ChatRequest(BaseModel):
-    message: str
-    history: list = []
+    messages: List[Message]
 
 
 @app.post("/chat")
 def chat(request: ChatRequest):
+
+    # Add system prompt
     messages = [
         {"role": "system", "content": "You are an expert Android developer."}
     ]
 
-    # Add history
-    for msg in request.history:
-        messages.append(msg)
-
-    # Add current message
-    messages.append({"role": "user", "content": request.message})
+    # Add full conversation from Spring Boot
+    for msg in request.messages:
+        messages.append({
+            "role": msg.role.lower(),   # normalize just in case
+            "content": msg.content
+        })
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -41,5 +45,5 @@ def chat(request: ChatRequest):
     )
 
     return {
-        "response": response.choices[0].message.content
+        "reply": response.choices[0].message.content
     }
