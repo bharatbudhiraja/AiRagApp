@@ -65,6 +65,8 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.hilt.android)
+    implementation(libs.navigation.compose)
+    implementation(libs.hilt.viewmodel)
     kapt(libs.hilt.compiler)
     implementation(libs.lifecycle.compose)
     testImplementation(libs.junit)

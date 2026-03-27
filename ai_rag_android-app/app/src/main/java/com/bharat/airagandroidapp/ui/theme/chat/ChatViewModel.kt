@@ -4,11 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bharat.airagandroidapp.data.repository.ChatRepository
 import com.bharat.airagandroidapp.domain.ChatMessage
+import com.bharat.airagandroidapp.domain.Conversation
 import com.bharat.airagandroidapp.domain.enum.Role
+import com.bharat.airagandroidapp.ui.theme.conversations.ConversationUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.collections.map
@@ -18,20 +19,26 @@ class ChatViewModel @Inject constructor(
     private val repository: ChatRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(ChatUiState())
-    val state: StateFlow<ChatUiState> = _state
+    private val _stateMessages = MutableStateFlow(ChatUiState())
+    val stateMessages: StateFlow<ChatUiState> = _stateMessages
 
-    private val conversationId = "11111111-1111-1111-1111-111111111111"
+    private val _stateConversations = MutableStateFlow(ConversationUiState())
+    val stateConversations: StateFlow<ConversationUiState> = _stateConversations
 
+    private var conversationId: String? = null
+
+    fun setConversation(id: String?) {
+        conversationId = id
+    }
     fun sendMessage(message: String) {
 
         // 1. Add user message immediately
-        val updatedMessages = _state.value.messages + ChatMessage(
+        val updatedMessages = _stateMessages.value.messages + ChatMessage(
             message,
             true
         )
 
-        _state.value = _state.value.copy(
+        _stateMessages.value = _stateMessages.value.copy(
             messages = updatedMessages,
             isLoading = true,
             error = null
@@ -42,18 +49,19 @@ class ChatViewModel @Inject constructor(
             try {
                 val reply = repository.sendMessage(conversationId, message)
 
-                val newMessages = _state.value.messages + ChatMessage(
-                    text = reply ?: "No response",
+                val newMessages = _stateMessages.value.messages + ChatMessage(
+                    text = reply?.reply ?: "No response",
                     isUser = false
                 )
+                conversationId = reply?.uuid
 
-                _state.value = _state.value.copy(
+                _stateMessages.value = _stateMessages.value.copy(
                     messages = newMessages,
                     isLoading = false
                 )
 
             } catch (e: Exception) {
-                _state.value = _state.value.copy(
+                _stateMessages.value = _stateMessages.value.copy(
                     isLoading = false,
                     error = e.message
                 )
@@ -62,11 +70,13 @@ class ChatViewModel @Inject constructor(
     }
 
     fun loadMessages() {
-        _state.value = _state.value.copy(isLoading = true)
+        if(conversationId == null)
+            return
+        _stateMessages.value = _stateMessages.value.copy(isLoading = true)
 
         viewModelScope.launch {
             try {
-                val response = repository.getMessages(conversationId)
+                val response = repository.getMessages(conversationId?:"")
 
                 val messages = if (response.success) {
                     response.data?.map {
@@ -79,13 +89,43 @@ class ChatViewModel @Inject constructor(
                     throw Exception(response.error?.message)
                 }
 
-                _state.value = _state.value.copy(
+                _stateMessages.value = _stateMessages.value.copy(
                     messages = messages,
                     isLoading = false
                 )
 
             } catch (e: Exception) {
-                _state.value = _state.value.copy(
+                _stateMessages.value = _stateMessages.value.copy(
+                    isLoading = false,
+                    error = e.message
+                )
+            }
+        }
+    }
+
+    fun loadConversations() {
+        _stateConversations.value = _stateConversations.value.copy(isLoading = true)
+        viewModelScope.launch {
+            try{
+                val response = repository.getConversations()
+                val conversations = if (response.success) {
+                    response.data?.map {
+                        Conversation(
+                            id = it.id,
+                            text = it.title ?: "",
+                            createdAt = it.createdAt
+                        )
+                    } ?: emptyList()
+                } else {
+                    throw Exception(response.error?.message)
+                }
+
+                _stateConversations.value = _stateConversations.value.copy(
+                    conversations = conversations,
+                    isLoading = false
+                )
+            }catch (e : Exception){
+                _stateConversations.value = _stateConversations.value.copy(
                     isLoading = false,
                     error = e.message
                 )

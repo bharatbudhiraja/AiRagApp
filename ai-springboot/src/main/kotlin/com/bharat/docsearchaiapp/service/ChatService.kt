@@ -1,6 +1,7 @@
 package com.bharat.docsearchaiapp.service
 
 import com.bharat.docsearchaiapp.dto.ChatRequest
+import com.bharat.docsearchaiapp.dto.response.ChatResponse
 import com.bharat.docsearchaiapp.dto.response.ConversationResponse
 import com.bharat.docsearchaiapp.dto.response.MessageResponse
 import com.bharat.docsearchaiapp.entity.Conversation
@@ -23,18 +24,23 @@ class ChatService(
     private val restTemplate = RestTemplate()
     private val fastApiUrl = "http://127.0.0.1:8000/chat"
 
-    fun sendMessage(request: ChatRequest): String {
+    fun sendMessage(request: ChatRequest): ChatResponse {
 
-        // 1. Ensure conversation exists
-        val conversation = conversationRepository.findById(request.conversationId)
-            .orElseGet {
-                val newConv = Conversation(
-                    id = request.conversationId,
-                    title = request.message.take(20)
-                )
-                conversationRepository.save(newConv)
-            }
+        val conversation = if (request.conversationId == null) {
 
+            val newConv = Conversation(
+                id = UUID.randomUUID(),   // ✅ ALWAYS generate here
+                title = request.message.take(20)
+            )
+            conversationRepository.save(newConv)
+
+        } else {
+
+            conversationRepository.findById(request.conversationId)
+                .orElseThrow {
+                    RuntimeException("Conversation not found")
+                }
+        }
         // 2. Save user message
         val userMessage = Message(
             conversationId = conversation.id,
@@ -81,7 +87,7 @@ class ChatService(
         messageRepository.save(aiMessage)
 
         // 7. Return response
-        return aiReplyText
+        return ChatResponse(aiReplyText, conversation.id)
     }
 
     fun getAllConversations(): List<ConversationResponse> {

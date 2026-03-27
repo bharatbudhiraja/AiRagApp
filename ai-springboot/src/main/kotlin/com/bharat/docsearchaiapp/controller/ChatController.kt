@@ -27,7 +27,7 @@ class ChatController(
         val reply = chatService.sendMessage(request)
         return ApiResponse(
             success = true,
-            data = ChatResponse(reply),
+            data = ChatResponse(reply.reply, reply.uuid),
             error = null
         )
     }
