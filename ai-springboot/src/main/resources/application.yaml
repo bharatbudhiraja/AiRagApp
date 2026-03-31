@@ -11,13 +11,14 @@ spring:
       maximum-pool-size: 10
       minimum-idle: 2
 
-      max-lifetime: 600000        # 10 min
-      idle-timeout: 120000        # 2 min
-      keepalive-time: 300000      # 🔥 KEY FIX
+      max-lifetime: 600000
+      idle-timeout: 120000
+      keepalive-time: 300000
 
       connection-timeout: 30000
       validation-timeout: 5000
       connection-test-query: SELECT 1
+      initialization-fail-timeout: 0
 
   jpa:
     hibernate:
