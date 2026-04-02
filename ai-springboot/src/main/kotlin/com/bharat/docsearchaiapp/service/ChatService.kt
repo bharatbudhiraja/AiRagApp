@@ -22,14 +22,14 @@ class ChatService(
     private val conversationRepository: ConversationRepository
 ) {
     private val restTemplate = RestTemplate()
-    private val fastApiUrl = "http://127.0.0.1:8000/chat"
+    private val fastApiUrl = "http://127.0.0.1:8001/chat"
 
     fun sendMessage(request: ChatRequest): ChatResponse {
 
         val conversation = if (request.conversationId == null) {
 
             val newConv = Conversation(
-                id = UUID.randomUUID(),   // ✅ ALWAYS generate here
+                id = UUID.randomUUID(),   // ALWAYS generate here
                 title = request.message.take(20)
             )
             conversationRepository.save(newConv)
