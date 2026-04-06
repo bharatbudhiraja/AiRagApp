@@ -36,34 +36,47 @@ def chat(request: ChatRequest):
     # Step 1: Get latest user message
     user_query = request.messages[-1].content
 
+    print("\n===== RAG DEBUG START =====")
+    print("USER QUERY:", user_query)
+
     # Step 2: Fetch relevant context from DB
     context_docs = search_similar(user_query)
+
+    print("\nRETRIEVED CHUNKS:")
+    for i, c in enumerate(context_docs):
+        print(f"{i+1}.", c)
+
     context_text = "\n".join(context_docs)
+
+    print("\nFINAL CONTEXT SENT TO LLM:")
+    print(context_text)
+    print("===== RAG DEBUG END =====\n")
 
     # Step 3: Updated system prompt with RAG
     messages = [
-    {
-        "role": "system",
-        "content": f"""
-You are an expert Android developer.
+        {
+            "role": "system",
+            "content": f"""
+You are an assistant.
 
-Use the following context if relevant:
+Answer the question using ONLY the context below.
 
+If the answer is present, extract it clearly.
+
+Context:
 {context_text}
-
-If the context is not useful, answer normally.
 """
-    }
-]
+        }
+    ]
 
-    # ✅ Step 4: Add full conversation (same as before)
+    # Step 4: Add full conversation
     for msg in request.messages:
         messages.append({
             "role": msg.role.lower(),
             "content": msg.content
         })
 
-    # ✅ Step 5: Call LLM
+    # Step 5: Call LLM
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages
@@ -131,25 +144,26 @@ def search_similar(query_text: str):
     embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
     query = text("""
-        SELECT content
+        SELECT content, embedding <-> :embedding AS distance
         FROM document_embeddings
-        ORDER BY embedding <-> :embedding
-        LIMIT 3
+        ORDER BY distance ASC
+        LIMIT 10
     """)
 
     with engine.connect() as conn:
         result = conn.execute(query, {
             "embedding": embedding_str
         })
-        return [row[0] for row in result.fetchall()]
+
+        rows = result.fetchall()
+
+        # debug distances
+        for r in rows:
+            print("DIST:", r[1], "| TEXT:", r[0])
+
+        return [r[0] for r in rows]
 
 
-def chunk_text(text: str, chunk_size: int = 300):
-    words = text.split()
-    chunks = []
-
-    for i in range(0, len(words), chunk_size):
-        chunk = " ".join(words[i:i + chunk_size])
-        chunks.append(chunk)
-
+def chunk_text(text: str):
+    chunks = [chunk.strip() for chunk in text.split("\n\n") if chunk.strip()]
     return chunks

@@ -22,7 +22,7 @@ class ChatService(
     private val conversationRepository: ConversationRepository
 ) {
     private val restTemplate = RestTemplate()
-    private val fastApiUrl = "http://127.0.0.1:8001/chat"
+    private val fastApiUrl = "http://127.0.0.1:8000/chat"
 
     fun sendMessage(request: ChatRequest): ChatResponse {
 

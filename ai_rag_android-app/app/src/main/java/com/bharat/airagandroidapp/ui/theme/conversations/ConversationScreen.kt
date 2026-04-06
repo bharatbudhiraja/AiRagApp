@@ -116,7 +116,7 @@ fun ConversationScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(onClick = {
-                // create new conversation (we'll wire next)
+                onConversationClick.invoke(null)
             }) {
                 Text("Start New Chat")
             }
