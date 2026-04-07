@@ -1,5 +1,6 @@
 package com.bharat.airagandroidapp.ui.theme.chat
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bharat.airagandroidapp.data.repository.ChatRepository
@@ -49,6 +50,8 @@ class ChatViewModel @Inject constructor(
             try {
                 val reply = repository.sendMessage(conversationId, message)
 
+                Log.d("CHAT_DEBUG", "Body: $reply")
+
                 val newMessages = _stateMessages.value.messages + ChatMessage(
                     text = reply?.reply ?: "No response",
                     isUser = false
@@ -60,7 +63,9 @@ class ChatViewModel @Inject constructor(
                     isLoading = false
                 )
 
+
             } catch (e: Exception) {
+                Log.e("CHAT_DEBUG", "Error: ${e.message}")
                 _stateMessages.value = _stateMessages.value.copy(
                     isLoading = false,
                     error = e.message
